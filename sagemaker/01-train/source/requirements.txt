@@ -1,0 +1,5 @@
+lmdb==0.98
+natsort==7.0.1
+opencv-python==4.2.0.34
+scikit-image==0.17.2
+nltk==3.5

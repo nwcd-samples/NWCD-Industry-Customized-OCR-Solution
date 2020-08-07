@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="" />
+    <meta name="author" content="" />
+
+    <title>OCR流式模板</title>
+    <link href="./style.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+    <script src="https://cdn.bootcss.com/jquery/1.12.4/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script src="../jcanvas.min.js"></script>
+</head>
+<body style="width:1750px;margin:0 auto;">
+
+<div class="container-fluid" id="main" style="width:100%">
+
+    <header class="blog-header py-3">
+        <div class="row flex-nowrap justify-content-between align-items-center">
+            <div class="col-4 pt-1">
+                <a class="text-muted" href="../fix/index.html" target="_blank">固定模板示例</a>
+                &nbsp;&nbsp;
+                <a class="text-muted" href="../flow_client/index.html" target="_blank">模板匹配测试</a>
+
+            </div>
+            <div class="col-4 text-center">
+                <h3>OCR流式模板</h3>
+            </div>
+            <div class="col-4 d-flex justify-content-end align-items-center">
+                <a class="btn btn-sm btn-outline-secondary" target="_blank" href="https://aws.amazon.com/cn/about-aws/select-regions/?sc_channel=PS&sc_campaign=acquisition_CN&sc_publisher=baidu&sc_medium=bz&sc_content=pc&sc_detail=HL&sc_category=pc&sc_segment=test&sc_country=CN&trkCampaign=request_for_pilot_account&trk=baidu-ppc-test"><img src="../static/logo.jpg" /></a>
+                <a class="btn btn-sm btn-outline-secondary" style="height:42px;margin-left:5px;padding-top:8px" target="_blank" href="https://github.com/dikers/ocr-template-export">Github</a>
+            </div>
+        </div>
+    </header>
+
+
+    <div>
+            <nav class="navbar navbar-light bg-light">
+                <form class="form-inline">
+
+                    <input class="form-control mr-sm-4" style="width:700px;font-size:12px"  id="json_url_input"  type="search" v-model="data_url"
+                           placeholder="填写AWS Textract 生成的json，用于生成新的模板" aria-label="Search">
+                    <button class="btn btn-outline-success my-2 my-sm-0" type="button" v-on:click="get_json()" >加载样本文件</button>
+
+
+                    <div class="spinner-grow text-dark" role="status" id="loading-icon">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+
+                </form>
+            </nav>
+
+            <div>
+            </div>
+    </div>
+
+    <div class="row" >
+        <div class="col-md-8" class="overflow-auto" id="myCanvasParent" >
+            <canvas id="myCanvas" width="1560" height="1200"
+                  style="border:1px solid #000000;">
+        </canvas>
+        </div>
+
+        <!-- Right Start -->
+        <div class="col-md-4">
+
+            <div>
+                <button type="button" class="btn btn-primary" v-on:click="add_table_block()">
+                    <svg class="bi bi-table" width="1em" height="1em" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                        <path fill-rule="evenodd" d="M14 1H2a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/>
+                        <path fill-rule="evenodd" d="M15 4H1V3h14v1z"/>
+                        <path fill-rule="evenodd" d="M5 15.5v-14h1v14H5zm5 0v-14h1v14h-1z"/>
+                        <path fill-rule="evenodd" d="M15 8H1V7h14v1zm0 4H1v-1h14v1z"/>
+                        <path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2H0V2z"/>
+                    </svg>
+                    添加 水平 表格模板</button>
+                <button type="button" class="btn btn-primary" v-on:click="add_vertical_table_block()">
+                    <svg class="bi bi-list-ul" width="1.2em" height="1.2em" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                        <path fill-rule="evenodd" d="M5 11.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zm-3 1a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm0 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm0 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/>
+                    </svg>
+                    添加 垂直 表格模板</button>
+<!--                <button type="button" class="btn btn-primary" v-on:click="add_field()">添加字段</button>-->
+            </div>
+
+            <div  class="jumbotron" style="margin-top:20px;padding-top:30px;padding-bottom:20px" v-if="tableBlockList.length ==0" >
+                <h4>说明</h4>
+
+
+
+
+                <svg class="bi bi-table" width="1.5em" height="1.5em" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M14 1H2a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/>
+                    <path fill-rule="evenodd" d="M15 4H1V3h14v1z"/>
+                    <path fill-rule="evenodd" d="M5 15.5v-14h1v14H5zm5 0v-14h1v14h-1z"/>
+                    <path fill-rule="evenodd" d="M15 8H1V7h14v1zm0 4H1v-1h14v1z"/>
+                    <path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2H0V2z"/>
+                </svg>
+                <b>水平表格</b>
+
+
+                <ul>
+                    <li><small>选择需要定位的表头元素</small></li>
+                    <li><small>填写列数，和每行最大高度</small></li>
+                    <li><small>拖动分割线，划分列</small></li>
+                    <li><small>填写名称，保存表格模板</small></li>
+                </ul>
+
+
+                <svg class="bi bi-list-ul" width="1.7em" height="1.7em" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M5 11.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zm-3 1a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm0 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm0 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/>
+                </svg>
+                <b>垂直表格</b>
+                <ul>
+                    <li><small>选择定位的表头元素</small></li>
+                    <li><small>填写最后一个行的高度</small></li>
+                    <li><small>拖动分割线，找到横向的最大可能宽度</small></li>
+                    <li><small>填写名称， 保存表格模板</small></li>
+                </ul>
+
+            </div>
+
+            <div  class="jumbotron" style="margin-top:20px;padding-top:30px;padding-bottom:20px" v-for="tableBlock of tableBlockList" >
+
+                <!--  横向表格 开始-->
+                <template  v-if="tableBlock.table_type==0">
+                    <svg class="bi bi-table" width="1.5em" height="1.5em" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                        <path fill-rule="evenodd" d="M14 1H2a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/>
+                        <path fill-rule="evenodd" d="M15 4H1V3h14v1z"/>
+                        <path fill-rule="evenodd" d="M5 15.5v-14h1v14H5zm5 0v-14h1v14h-1z"/>
+                        <path fill-rule="evenodd" d="M15 8H1V7h14v1zm0 4H1v-1h14v1z"/>
+                        <path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2H0V2z"/>
+                    </svg>
+                 <span>水平表格</span>  <small v-text="tableBlock.id"  ></small>
+                <button style="margin-left:175px;margin-bottom:5px" type="button" class="btn btn-light" v-on:click="delete_table_block($event)"
+                        v-bind:name="tableBlock.id" >删除表格</button>
+
+                <div class="form-row align-items-center">
+                    <div class="col-auto" style="width:150px">
+                        <div class="input-group mb-1">
+                            <div class="input-group-prepend">
+                                <div class="input-group-text">行高</div>
+                            </div>
+                            <input type="number" class="form-control"   v-model="tableBlock.row_max_height"  placeholder="行高">
+                        </div>
+                    </div>
+                    <div class="col-auto" style="width:150px">
+                        <div class="input-group mb-1">
+                            <div class="input-group-prepend">
+                                <div class="input-group-text">列数</div>
+                            </div>
+                            <input type="number" οninput="value=value.replace(/[^\d]/g,'')"  class="form-control"  v-model="tableBlock.th_count"  placeholder="列数">
+                        </div>
+                    </div>
+                    <div class="col-auto" style="width:150px">
+                        <div class="input-group mb-1">
+                            <div class="input-group-prepend">
+                                <div class="input-group-text">主列</div>
+                            </div>
+                            <input type="number" οninput="value=value.replace(/[^\d]/g,'')"  class="form-control"  v-model="tableBlock.main_col_num"  placeholder="主列">
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" οninput="value=value.replace(/[^\d]/g,'')"  class="btn btn-primary mb-2"
+                                v-bind:name="tableBlock.id"
+                                v-on:click="create_table_split_th($event)" >生成分割线</button>
+                    </div>
+                </div>
+
+                <div class="form-row align-items-center">
+                    <div class="col-auto" style="width:300px">
+                        <div class="input-group mb-1">
+                            <div class="input-group-prepend">
+                                <div class="input-group-text">表格名称</div>
+                            </div>
+                            <input type="text" class="form-control"  v-model="tableBlock.table_name"   placeholder="表格名称">
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-primary mb-2"
+                                v-bind:name="tableBlock.id"
+                                v-on:click="create_table_template($event)"  >创建表格</button>
+                    </div>
+                </div>
+
+                </template>
+                <!--  横向表格 结束-->
+
+
+
+                <!--  纵向表格开始-->
+                <template  v-if="tableBlock.table_type==1">
+                    <svg class="bi bi-list-ul" width="1.5em" height="1.5em" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                        <path fill-rule="evenodd" d="M5 11.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zm-3 1a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm0 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm0 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/>
+                    </svg>
+
+                    <span >垂直表格</span>  <small v-text="tableBlock.id"  ></small>
+                    <button style="margin-left:175px;margin-bottom:5px" type="button" class="btn btn-light"
+                            v-on:click="delete_table_block($event)"
+                            v-bind:name="tableBlock.id" >删除表格</button>
+
+                    <div class="form-row align-items-center">
+                        <div class="col-auto" style="width:300px">
+                            <div class="input-group mb-1">
+                                <div class="input-group-prepend">
+                                    <div class="input-group-text">末行行高</div>
+                                </div>
+                                <input type="number" class="form-control"   v-model="tableBlock.row_max_height"  placeholder="末行行高">
+                            </div>
+                        </div>
+
+                        <div class="col-auto">
+                            <button type="submit" οninput="value=value.replace(/[^\d]/g,'')"  class="btn btn-primary mb-2"
+                                    v-bind:name="tableBlock.id"
+                                    v-on:click="create_vertical_table_split_th($event)" >生成分割线</button>
+                        </div>
+                    </div>
+
+                    <div class="form-row align-items-center">
+                        <div class="col-auto" style="width:300px">
+                            <div class="input-group mb-1">
+                                <div class="input-group-prepend">
+                                    <div class="input-group-text">表格名称</div>
+                                </div>
+                                <input type="text" class="form-control"  v-model="tableBlock.table_name"   placeholder="表格名称">
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <button type="submit" class="btn btn-primary mb-2"
+                                    v-bind:name="tableBlock.id"
+                                    v-on:click="create_vertical_table_template($event)"  >创建表格</button>
+                        </div>
+                    </div>
+
+                </template>
+                <!--  纵向表格 结束-->
+
+            </div>
+
+
+
+            <div class="form-row align-items-center">
+                <div class="col-auto" style="width:300px">
+                    <div class="input-group mb-1">
+                        <div class="input-group-prepend">
+                            <div class="input-group-text">模板名称</div>
+                        </div>
+                        <input type="text" id="template_name_id" class="form-control"    placeholder="输入模板名称">
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary mb-2"  v-on:click="save_template()"  >保存模板</button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Modal  start -->
+        <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="myModalLabel">提示信息</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body" id="myModalContent">
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">关闭</button>
+<!--                        <button type="button" class="btn btn-primary">Save changes</button>-->
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Modal  end -->
+        <!-- Right End -->
+    </div>
+
+
+</div>
+
+</body>
+<script src="./ui.js"></script>
+<script src="./index.js"></script>
+<script src="./utils.js"></script>
+<script src="./vertical.js"></script>
+<script src="../util.js"></script>
+<!--<script source="./network.js"></script>-->
+
+</html>

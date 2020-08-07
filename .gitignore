@@ -1,5 +1,104 @@
-# Object file
-*.o
+# Compiled class file
+*.class
 
-# Ada Library Information
-*.ali
+# Log file
+*.log
+
+# BlueJ files
+*.ctxt
+
+# Mobile Tools for Java (J2ME)
+.mtj.tmp/
+
+# Package Files #
+#*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+hs_err_pid*
+
+
+*.pth
+__pycache__/
+*/__pycache__
+/dataset/*
+*/dataset/*
+*/datasets/
+/datasets/*
+/models/
+*/output/
+
+*/models
+/target/
+/.idea/*
+/logs/*
+/classes/*
+!.mvn/wrapper/maven-wrapper.jar
+.DS_Store
+.idea/
+/output/
+*/weights/
+*/result/
+*saved_models/
+*.pth
+.DS_Store
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+.ipynb_checkpoints/
+.ipynb_checkpoints/*
+*.ipynb_checkpoints
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+*/target/*
+*/target
+/target/*
+*/dataset
+/dataset/*
+
+/raw-data/*
+*/cdk.context.json
+cdk-infra/cdk.context.json
+/output/*
+*/temp
+
+build.sh
+
+### NetBeans ###
+/nbproject/private/
+/build/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+.idea/
+.idea/*
+
+*/.env/
+.env/*
+*/.env/*
+
+/cdk.out/
+*/cdk.out/
+*/temp
+
+cdk.context.json
+
+*data_cn
+*data_en
+*.zip
+*temp
