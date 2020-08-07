@@ -1,6 +1,6 @@
 export PYTHONPATH=../
 
-python ../ocr_template/web/text_ocr_util.py \
+python ../ocr_template/textract_ocr.py \
 --input_dir='../input/' \
 --output_dir='../output/' \
 --prefix_s3='ocr_ouput' \

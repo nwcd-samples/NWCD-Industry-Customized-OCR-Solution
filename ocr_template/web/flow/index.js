@@ -230,7 +230,7 @@ function draw_block_inside(blockItem){
    $('#myCanvas').drawText({
      layer: true,
      fillStyle: '#36c',
-     fontSize: '8pt',
+     fontSize: '10pt',
      text: blockItem['text'],
      autosave: true,
      x: blockItem['x'] - $('#myCanvas').measureText('myText').width / 2, y: blockItem['y'],
