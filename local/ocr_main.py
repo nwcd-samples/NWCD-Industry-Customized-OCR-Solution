@@ -10,10 +10,12 @@ import uuid
 import fitz
 import json
 import glob
+import uuid
 import cv2
 import os
 from collections import OrderedDict
 
+import traceback
 import torch
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
@@ -33,6 +35,7 @@ from recognition.textract import ConverToTextract
 
 DEBUG = True
 
+# 选择GPU 还是CPU进行训练
 #device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 device = torch.device('cpu')
 
@@ -100,6 +103,8 @@ class OcrMain(object):
                             help='the number of output channel of Feature extractor')
         parser.add_argument('--hidden_size', type=int, default=256, help='the size of the LSTM hidden state')
         parser.add_argument('--label_file_list', type=str, required=True, help='label_file_list')
+        parser.add_argument('--generate_train_data_dir', type=str, default='', help='生成训练数据的文件夹')
+        parser.add_argument('--generate_train_confidence', type=float, default=0.90, help='低于阈值置信度的图片， 进行人工标注，然后训练')
         
         return parser.parse_args()
 
@@ -120,19 +125,26 @@ class OcrMain(object):
         for files in types:
             files_grabbed.extend(glob.glob(os.path.join(self.input_dir, files)))
 
+        # 给每个图片建立子文件夹 ， 用于存放临时生成的小图片
         for index, image_file in enumerate(files_grabbed):
             temp_name = image_file.split("/")[-1].split('.')[0]
-            #print(temp_name)
             os.makedirs(os.path.join(self.output_dir, temp_name))
             
-            
-            
-            self.image_files.append(image_file)
+            self.image_files.append(image_file)  #所有的原始图片 保存到image_files中
         #print("初始化完成， 共有{}张图片".format(len(self.image_files)))
         
     
+        #生成用于训练的小图片文件夹
+        if not self.args.generate_train_data_dir == '':
+            if os.path.exists(self.args.generate_train_data_dir):
+                shutil.rmtree(self.args.generate_train_data_dir)
+            os.makedirs(self.args.generate_train_data_dir)     
+    
+    
     def init_craft_net(self):
-                
+        """
+        初始化 文本区域检测网络
+        """        
         net = CRAFT()     # initialize
         print('CRAFT Loading weights from checkpoint (' + self.args.trained_model + ')')
         if self.args.cuda:
@@ -151,7 +163,9 @@ class OcrMain(object):
     
     def init_recognition_model(self):
         
-        """ model configuration """
+        """
+        初始化文字识别模型
+        """
 
         file_list = self.args.label_file_list.split(',')
         self.args.character = get_key_from_file_list(file_list)  
@@ -206,23 +220,22 @@ class OcrMain(object):
         :return:
         """
      
-
+        # 遍历所有图片文件
         for index, image_file in enumerate(self.image_files):
 
             temp_name = image_file.split('/')[-1].split('.')[0]
-            
-            suid = ''.join(str(uuid.uuid4()).split('-'))
             sub_image_dir = os.path.join(self.output_dir, temp_name)
 
             label_file = os.path.join( self.output_dir, temp_name + '.txt')
-            print("label_file ", label_file)
-
+            #print("label_file ", label_file)
             
             if os.path.exists(label_file):
                 try:      
                     self.recongnize_sub_image_file(image_file, label_file, sub_image_dir)
-                except Exception:
+                except Exception as e:
                     print("【Error】 图片[{}]  没有解析成功 ".format(image_file))
+                    print('traceback.format_exc():\n%s' % traceback.format_exc())
+                    
             
             else:
                 print("【Error】 图片[{}]  没有生成对应的label文件 [{}]".format(image_file, label_file))
@@ -241,42 +254,48 @@ class OcrMain(object):
         :param sub_image_dir:
         :return:
         """
-        lines = []
         with open(label_file, 'r', encoding='utf-8') as f:
-            for line in f:
-                lines.append(line)
+            lines = f.readlines()
+                
+        # 进行文本区域的合并， 有一些比较接近的小区域，合并成较大区域        
         lines = do_merge_box(lines)
 
         save_img = cv2.imread(image_file)
 
         image_obj_list = []
         
+        randam_id = str(uuid.uuid4())
+        randam_id = ''.join(randam_id.split('-'))[0:5]
+        
         for i, line in enumerate(lines):
             # Draw box around entire LINE
+            #print("{}   {}".format(i , line))
             points = line.replace("\n", '').split(',')
+            # 计算四个顶点
             left = int(points[0]) if int(points[6]) > int(points[0]) else int(points[6])
             right = int(points[2]) if int(points[4]) < int(points[2]) else int(points[4])
             top = int(points[1]) if int(points[3]) > int(points[1]) else int(points[3])
             bottom = int(points[5]) if int(points[7]) < int(points[5]) else int(points[7])
             height = bottom - top
             width = right - left
-            
-            c_img = save_img[top: int(top + height), left: int(left + width)]
-            new_height = 32
+            #print("index= {:4d}    top={} bottom={} left={} right={}".format(i, top, bottom, left, right))
+            c_img = save_img[top: bottom, left: right]
+
+            # 图片resize, 可以不使用， 网络会进行缩放
+            new_height = self.args.imgH
             new_width = int(width * new_height / height)
+            #c_img=cv2.resize(c_img,(new_width, new_height)) 
             
             #print(" {} {}  new {} {}".format(width, height, new_width, new_height ) )
-            #c_img=cv2.resize(c_img,(new_width, new_height))   
-            new_image_file = os.path.join( sub_image_dir,  str(i).zfill(6)+ '.jpg')
+            #new_image_file = os.path.join( sub_image_dir,  str(i).zfill(6)+ '.jpg')
+            train_image_file = '{}_{}_{}.jpg'.format(sub_image_dir.split('/')[-1], randam_id, str(i).zfill(5))
+            train_image_file = os.path.join(self.args.generate_train_data_dir, train_image_file)
+            if not self.args.generate_train_data_dir == '':
+                cv2.imwrite(train_image_file, c_img)
+            image_obj_list.append((train_image_file, c_img))
 
-            #print("sub image: ", new_image_file)
-            if DEBUG:
-                cv2.imwrite(new_image_file, c_img)
-            image_obj_list.append((new_image_file, c_img))
-
-        #print("image_obj_list   start      length: ", len(image_obj_list))
             
-        # 补齐  batch_size
+        #如果用多GPU进行推理  需要补齐batch_size， 重复复制最后一个图片， 让list 数量可以整除batch size
         """
         if len(image_obj_list) >  self.args.batch_size and  len(image_obj_list) % self.args.batch_size !=0:
             for item in range(self.args.batch_size - len(image_obj_list) % self.args.batch_size):
@@ -295,24 +314,43 @@ class OcrMain(object):
             drop_last = False,
             collate_fn=self.AlignCollate_demo, pin_memory=False)    
             
+        # 进行文字识别    
         results = test_recong(self.args, self.model, demo_loader,self.converter, device)    
 
         #file_name_dest, image_file, lines
         new_lines = []
         #print("line length:  {}   result length: {} ".format(len(lines), len(results)))
         
+        # 如果用多GPU进行推理, 删除掉多余的补齐数据
         if len(results) > len(lines):
             results = results[0:len(lines)]
             
-        
+        total_socre= 0.0
+        train_label_txt = ''
         for line, result in zip(lines, results) :
             new_line = '{},{:.4f},{}\n'.format(line.replace("\n", ''), float(result[2]), result[1] )
+            total_socre += float(result[2])
             new_lines.append(new_line)
+            # 生成训练的label文件
+            if float(result[2]) < self.args.generate_train_confidence:
+                train_label_txt += '{} {}\n'.format(result[0].split('/')[-1], result[1])
+            else:
+                if not self.args.generate_train_data_dir == '':   
+                    os.remove(result[0])
+        # 生成训练的label文件
+        if not self.args.generate_train_data_dir == '':    
+            with open(os.path.join(self.args.generate_train_data_dir, 'labels.txt'), 'a', encoding='utf-8') as file:
+                file.write(train_label_txt)
         
+        
+        
+        #生成Textract 格式数据
         file_name_dest = os.path.join(self.output_dir, label_file.split('/')[-1].split('.')[0] + '.json' )
         converToTextract = ConverToTextract( file_name_dest, image_file, new_lines)
         converToTextract.convert()
-        print('【输出】生成json文件{}.   识别{}个文本'.format(file_name_dest, len(results)))
+        
+        mean_socre = total_socre/len(results)   #平均置信度
+        print('【输出】生成json文件{}.   识别{}个文本, 平均得分 {:.4f}'.format(file_name_dest, len(results), mean_socre))
         
 
     def main(self):
