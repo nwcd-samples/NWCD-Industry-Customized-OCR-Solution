@@ -39,10 +39,11 @@
 ```
 conda create -n  ocr python=3.6
 source activate ocr
+cd local
 pip install -r requirements.txt -i https://mirrors.163.com/pypi/simple/ 
 
 
-cd shell
+cd ../shell
 sh chinese_ocr.sh
 
 ```
