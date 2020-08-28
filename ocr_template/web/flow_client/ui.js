@@ -26,6 +26,9 @@ $(function(){
                       url = $("#json_url_input").val()
                       get_data(url)
                 },
+                export_json:function(){
+                    show_message(JSON.stringify(vue.tableBlockList))
+                },
              }
     })
     get_data(vue.data_url)
