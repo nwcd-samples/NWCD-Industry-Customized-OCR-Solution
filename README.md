@@ -132,4 +132,4 @@ sh run.sh
 
 ## 图片进行ocr识别脚本
 
-[操作步骤参考](./ocr_template/README.md)
+[操作步骤参考 ./ocr_template/README.md](./ocr_template/README.md)
